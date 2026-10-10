@@ -32,6 +32,11 @@
    deposit_requests/wallet_transactions/vouchers/card_categories/electronic_cards/profiles)
    ويعبّئها من الأعمدة القديمة (`banners.is_active` → `active`، `card_categories.name` → `name_ar`،
    `wallet_transactions.amount` → `amount_iqd`).
+   - `wallet_transactions.amount` (القديم `NOT NULL` بدون default): يمنحه السكربت `default 0` ويضيف
+     مُشغّل `wallet_amount_sync` يزامن `amount` ↔ `amount_iqd` تلقائياً لكل الكتّاب، تفادياً لخطأ
+     `null value in column "amount" ... violates not-null constraint` عند شراء أي خدمة.
+   - `wallet_transactions.transaction_type` (القديم `NOT NULL` بدون default): يمنحه السكربت
+     `default 'purchase'` حتى لا يفشل أي كاتب (يشمل RPCs مثل `credit_wallet`).
 3. ينشئ/يعيد بناء الدوال التي يستدعيها التطبيق: `is_staff`, `is_master_admin`,
    `ensure_master_admin`, `set_updated_at`, `guard_wallet_balance`, `handle_new_user`,
    `check_rate_limit`, `credit_wallet`, `redeem_voucher`, `purchase_with_wallet`,
@@ -66,6 +71,8 @@
 | بقاء أخطاء 400 بعد النجاح | كاش PostgREST | انتظر ~10 ثوانٍ أو أعد التشغيل (يعيد `notify pgrst`) |
 | خطأ عند `alter publication` | الجدول مضاف مسبقاً | طبيعي — العبارة تجاوز الخطأ تلقائياً |
 | `Could not choose the best candidate function between public.admin_adjust_wallet(...)` | وجود نسخ متعددة (overloads) للدالة | السكربت يحذفها كلها ويعيد إنشاء نسخة واحدة؛ أعد تشغيل السكربت ثم أعد تحميل التطبيق |
+| `null value in column "amount" of relation "wallet_transactions" violates not-null constraint` | العمود القديم `amount` `NOT NULL` بدون default بينما الكود يكتب `amount_iqd` | أعِد تشغيل السكربت (يمنح `default 0` ويضيف مُشغّل `sync_wallet_amount`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
+| `null value in column "transaction_type" of relation "wallet_transactions" violates not-null constraint` | العمود القديم `transaction_type` `NOT NULL` بدون default | أعِد تشغيل السكربت (يمنح `default 'purchase'`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
 
 ---
 

@@ -176,8 +176,41 @@ begin
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'wallet_transactions' and column_name = 'amount'
   ) then
+    -- العمود القديم amount قد يكون NOT NULL بدون default، بينما كود التطبيق يكتب amount_iqd.
+    -- لذا يفشل شراء الرصيد/الطلب بـ:
+    --   null value in column "amount" of relation "wallet_transactions" violates not-null constraint
+    -- 1) نمنحه default = 0 حتى لا يفشل أي كاتب (يشمل أي trigger على public.orders).
+    execute 'alter table public.wallet_transactions alter column amount set default 0';
+    -- 2) نزامن القيم القديمة ثم نُبقي العمودين متزامنين عبر trigger (لكل الكتّاب).
     update public.wallet_transactions set amount_iqd = amount
      where amount_iqd = 0 and amount is not null and amount <> 0;
+    execute '
+      create or replace function public.sync_wallet_amount()
+      returns trigger language plpgsql set search_path = public as $body$
+      begin
+        if coalesce(new.amount, 0) = 0 and coalesce(new.amount_iqd, 0) <> 0 then
+          new.amount := new.amount_iqd;
+        end if;
+        if coalesce(new.amount_iqd, 0) = 0 and coalesce(new.amount, 0) <> 0 then
+          new.amount_iqd := new.amount;
+        end if;
+        return new;
+      end $body$';
+    execute 'drop trigger if exists wallet_amount_sync on public.wallet_transactions';
+    execute 'create trigger wallet_amount_sync before insert or update on public.wallet_transactions for each row execute function public.sync_wallet_amount()';
+  end if;
+end $$;
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'wallet_transactions' and column_name = 'transaction_type'
+  ) then
+    -- العمود القديم transaction_type قد يكون NOT NULL بدون default → يفشل شراء الرصيد/الطلب بـ:
+    --   null value in column "transaction_type" of relation "wallet_transactions" violates not-null constraint
+    -- نمنحه default = 'purchase' فيغطي كل الكتّاب (RPCs والـ triggers) دون الحاجة لتغيير استعلاماتهم.
+    execute $x$ alter table public.wallet_transactions alter column transaction_type set default 'purchase' $x$;
   end if;
 end $$;
 
@@ -354,8 +387,8 @@ begin
    where id = _user_id
   returning wallet_balance_iqd into next_balance;
   if next_balance is null then raise exception 'profile_not_found'; end if;
-  insert into public.wallet_transactions (user_id, amount_iqd, balance_after, reason)
-  values (_user_id, _amount, next_balance, coalesce(_reason,''));
+  insert into public.wallet_transactions (user_id, amount, amount_iqd, balance_after, reason)
+  values (_user_id, _amount, _amount, next_balance, coalesce(_reason,''));
   return next_balance;
 end $$;
 revoke all on function public.credit_wallet(uuid, numeric, text) from public, anon;

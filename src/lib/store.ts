@@ -437,7 +437,9 @@ export async function adjustWallet(
     .from("wallet_transactions")
     .insert({
       user_id: userId,
+      amount: amount,
       amount_iqd: amount,
+      transaction_type: "purchase",
       balance_after: newBalance,
       reason: sanitizeText(reason, 200),
     })
