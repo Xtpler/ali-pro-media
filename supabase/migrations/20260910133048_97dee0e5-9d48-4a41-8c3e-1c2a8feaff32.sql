@@ -1,0 +1,1 @@
+revoke all on function public.admin_adjust_wallet(uuid, numeric, text) from anon;
