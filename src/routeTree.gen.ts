@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as RefUserIdRouteImport } from './routes/ref.$userId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,16 +35,23 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const RefUserIdRoute = RefUserIdRouteImport.update({
+  id: '/ref/$userId',
+  path: '/ref/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/app': typeof AppRouteWithChildren
+  '/ref/$userId': typeof RefUserIdRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/ref/$userId': typeof RefUserIdRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -51,20 +59,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/app': typeof AppRouteWithChildren
+  '/ref/$userId': typeof RefUserIdRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/app' | '/app/'
+  fullPaths: '/' | '/admin' | '/app' | '/ref/$userId' | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/app'
-  id: '__root__' | '/' | '/admin' | '/app' | '/app/'
+  to: '/' | '/admin' | '/ref/$userId' | '/app'
+  id: '__root__' | '/' | '/admin' | '/app' | '/ref/$userId' | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AppRoute: typeof AppRouteWithChildren
+  RefUserIdRoute: typeof RefUserIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -97,6 +107,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/ref/$userId': {
+      id: '/ref/$userId'
+      path: '/ref/$userId'
+      fullPath: '/ref/$userId'
+      preLoaderRoute: typeof RefUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -114,6 +131,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AppRoute: AppRouteWithChildren,
+  RefUserIdRoute: RefUserIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

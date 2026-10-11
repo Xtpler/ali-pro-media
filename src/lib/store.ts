@@ -4,7 +4,14 @@
  */
 import { supabase } from "@/lib/supabase";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
-import type { AppNotification, Deposit, DepositGateway, Order, OrderStatus } from "@/types";
+import type {
+  AppNotification,
+  Deposit,
+  DepositGateway,
+  Order,
+  OrderStatus,
+  Referral,
+} from "@/types";
 
 /* ------------------------------------------------------------------ ملفات */
 
@@ -527,6 +534,79 @@ export async function listWalletTransactions(userId?: string) {
   if (userId) query = query.eq("user_id", userId);
   const { data } = await query;
   return data ?? [];
+}
+
+/* ------------------------------------------------------------- الإحالات */
+
+export type ApplyReferralResult = { ok: boolean; message: string };
+
+const REFERRAL_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * تسجيل إحالة: المستخدم الحالي مدعوّ من referrerId (عبر فتح /ref/<id>).
+ * تُعيد رمز الحالة (ok / already / self / invalid / needs_auth) كمعلومة للعرض.
+ */
+export async function applyReferral(referrerId: string): Promise<ApplyReferralResult> {
+  if (!REFERRAL_UUID_RE.test(referrerId)) return { ok: false, message: "invalid" };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { data, error } = await supabase.rpc("apply_referral", {
+      _referrer_id: referrerId,
+    });
+    if (!error) {
+      const code = String(data ?? "ok");
+      return { ok: code === "ok", message: code };
+    }
+    const raw = [error.message, error.code ?? "", error.details ?? ""].join(" ");
+    const schemaCached = /pgrst202|could not find the function|schema cache|404/i.test(raw);
+    if (attempt === 0 && schemaCached) {
+      // بعد تطبيق db/reconcile_live_schema.sql تبقى دالة غير ظاهرة مؤقتاً — أعد المحاولة
+      await delay(1200);
+      continue;
+    }
+    // الدالة غير موجودة أصلاً (لم يُطبَّق سكربت المزامنة بعد) — رمز عرض واضح
+    if (schemaCached) return { ok: false, message: "not_ready" };
+    return { ok: false, message: translateError(error.message) };
+  }
+  return { ok: false, message: "error" };
+}
+
+/** يخزّن إحالة معلّقة (زائر فتح /ref/<id> قبل تسجيل الدخول) لحين الدخول */
+export function storePendingReferral(referrerId: string): void {
+  try {
+    if (REFERRAL_UUID_RE.test(referrerId)) {
+      window.localStorage.setItem("apm_pending_ref", referrerId);
+    }
+  } catch {
+    /* private mode */
+  }
+}
+
+/** يطبّق الإحالة المعلّقة بعد نجاح تسجيل الدخول ثم يمسحها (أفضل جهد) */
+export function consumePendingReferral(): void {
+  try {
+    const pending = window.localStorage.getItem("apm_pending_ref");
+    if (!pending) return;
+    window.localStorage.removeItem("apm_pending_ref");
+    void applyReferral(pending).catch(() => undefined);
+  } catch {
+    /* private mode */
+  }
+}
+
+/** إحالاتي كداعٍ (من سُجّلوا عبر رابطي) */
+export async function listReferrals(userId: string): Promise<Referral[]> {
+  const { data, error } = await supabase
+    .from("referrals")
+    .select("*")
+    .eq("referrer_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []) as unknown as Referral[];
 }
 
 /* ------------------------------------------------------- سوق الحسابات */

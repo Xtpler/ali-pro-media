@@ -27,7 +27,7 @@
 ## ماذا يفعل السكربت / What it does
 
 1. ينشئ الجداول المفقودة: `products`, `market_accounts`, `market_account_secrets`,
-   `push_devices`, `action_logs`, `unban_appeals`, `password_reset_otps`.
+   `push_devices`, `action_logs`, `unban_appeals`, `password_reset_otps`, `referrals`.
 2. يضيف الأعمدة الناقصة الجدولية (banners/orders/support_tickets/ticket_replies/
    deposit_requests/wallet_transactions/vouchers/card_categories/electronic_cards/profiles)
    ويعبّئها من الأعمدة القديمة (`banners.is_active` → `active`، `card_categories.name` → `name_ar`،
@@ -45,11 +45,16 @@
 3. ينشئ/يعيد بناء الدوال التي يستدعيها التطبيق: `is_staff`, `is_master_admin`,
    `ensure_master_admin`, `set_updated_at`, `guard_wallet_balance`, `handle_new_user`,
    `check_rate_limit`, `credit_wallet`, `redeem_voucher`, `purchase_with_wallet`,
-   `admin_adjust_wallet`, `admin_review_unban`, `review_support_ticket`.
+   `admin_adjust_wallet`, `admin_review_unban`, `review_support_ticket`,
+   `apply_referral`, `maybe_reward_referral`.
    - `admin_adjust_wallet`: يحذف **كل** النسخ القديمة بنفس الاسم (overloads) ثم ينشئ
      نسخة قياسية واحدة تُرجع الرصيد الجديد — لتفادي خطأ PostgREST
      `Could not choose the best candidate function between public.admin_adjust_wallet(...)`.
-4. يربط مشغّلات (triggers) الملف الشخصي والمحفظة وإنشاء المستخدم بدون تكرار.
+   - **نظام الإحالة**: كل مستخدم له رابط فريد `/ref/<user-id>`؛ دالة `apply_referral` تربط
+     المُدعوّ بالداعي (حالة `pending`)، ومشغّل `referral_reward` على `deposit_requests` يمنح
+     الداعي مكافأة **قابلة للتهيئة** (الثابت `bonus_pct` داخل `maybe_reward_referral`، حالياً 10٪)
+     من أول إيداع **معتمد** للصديق، ويقيّدها في `wallet_transactions` عبر `credit_wallet`.
+4. يربط مشغّلات (triggers) الملف الشخصي والمحفظة وإنشاء المستخدم ومكافأة الإحالة بدون تكرار.
 5. يضبط RLS وسياسات الجداول الجديدة/المتغيّرة، وحاويات التخزين
    (`avatars`, `deposits`, `unban_requests`, `attachments`) وسياساتها.
 6. يضيف جداول المزامنة الفورية (Realtime) التي يستخدمها التطبيق.
@@ -66,6 +71,8 @@
 - ظهور البانرات والإعلان العلوي.
 - فتح تبويب الدعم وإنشاء تذكرة، وطلب فك الحظر يُرسل بنجاح.
 - ترقية/سحب صلاحية `admin` من لوحة الأدمن (لصاحب البريد الرئيسي) تعمل.
+- نسخ رابط الدعوة من «حسابي» أو زر «ادعُ صديقاً» ثم فتحه: تظهر صفحة `/ref/<id>` وتُربَط الإحالة.
+- قبول أول إيداع (موافقة) لمستخدم مُدعوّ: تُضاف مكافأة 10٪ لمحفظة الداعي ويصله إشعار.
 
 ## استكشاف الأخطاء / Troubleshooting
 
@@ -80,6 +87,7 @@
 | `null value in column "transaction_type" of relation "wallet_transactions" violates not-null constraint` | العمود القديم `transaction_type` `NOT NULL` بدون default | أعِد تشغيل السكربت (يمنح `default 'purchase'`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
 | `null value in column "order_type" of relation "orders" violates not-null constraint` | العمود القديم `order_type` `NOT NULL` بدون default | أعِد تشغيل السكربت (يمنح `default 'service'`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
 | `null value in column "total_price" of relation "orders" violates not-null constraint` | العمود القديم `total_price` `NOT NULL` بدون default | أعِد تشغيل السكربت (يمنح `default 0`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
+| `could not find the function public.apply_referral` أو اختفاء جدول `referrals` | لم يُطبَّق سكربت المزامنة بعد | أعِد تشغيل السكربت (ينشئ `referrals` ودالة `apply_referral` والمشغّل) ثم أعد تحميل التطبيق |
 
 ---
 

@@ -39,10 +39,25 @@ export type Order = {
   credentials?: string;
   /** نوع الطلب: خدمة/بطاقة أو حساب من السوق */
   kind?: "service" | "account";
+  /** نوع الطلب الثانوي (card/service) — متزامن مع الدالة purchase_with_wallet */
+  order_type?: "card" | "service" | string;
+  /** إجمالي سعر الطلب — يعادل price_iqd في الإصدارات الأحدث */
+  total_price?: number;
   created_at: string;
 };
 
 export type DepositStatus = "pending" | "approved" | "rejected";
+
+export type ReferralStatus = "pending" | "rewarded";
+
+export type Referral = {
+  id: string;
+  referrer_id: string;
+  referred_user_id: string;
+  status: ReferralStatus;
+  reward_amount_iqd: number;
+  created_at: string;
+};
 
 export type Deposit = {
   id: string;

@@ -19,6 +19,7 @@ import {
   confirmPasswordReset,
 } from "@/lib/passwordReset.functions";
 import { isMasterAdminEmail } from "@/lib/constants";
+import { consumePendingReferral } from "@/lib/store";
 import type { Profile } from "@/types";
 
 type ResetResult = { error?: string };
@@ -140,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setOtpPending(false);
         setOtpPurpose(null);
         await loadProfile(session.user);
+        // إحالة معلّقة وصلت عبر /ref/<id> قبل تسجيل الدخول — تُطبَّق الآن
+        consumePendingReferral();
       } else {
         setProfile(null);
         pushStarted.current = false;

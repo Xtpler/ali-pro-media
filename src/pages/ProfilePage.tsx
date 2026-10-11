@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Check,
+  Copy,
   Gift,
   Mail,
   MessageSquare,
@@ -17,12 +18,19 @@ import { useAuth } from "@/context/AuthContext";
 import { formatIQD } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
 import { getTickets, uploadAvatar } from "@/lib/data";
-import { fileUrl, listDeposits, listOrders, listWalletTransactions } from "@/lib/store";
+import {
+  fileUrl,
+  listDeposits,
+  listOrders,
+  listReferrals,
+  listWalletTransactions,
+} from "@/lib/store";
 import { formatDate } from "@/lib/format";
 import { redeemVoucher } from "@/lib/site";
+import { REFERRAL_BONUS_PERCENT, referralLink } from "@/lib/constants";
 import { useWalletRealtime } from "@/hooks/useWallet";
 import { Page, StatusPill } from "@/pages/OrdersPage";
-import type { Deposit } from "@/types";
+import type { Deposit, Referral } from "@/types";
 import { DepositModal } from "@/components/DepositModal";
 import { UnbanAppealModal } from "@/components/UnbanAppealModal";
 
@@ -48,6 +56,40 @@ export function ProfilePage() {
   const [appealOpen, setAppealOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [stats, setStats] = useState({ orders: 0, active: 0, tickets: 0 });
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [refCopied, setRefCopied] = useState(false);
+
+  const myReferralLink = referralLink(profile?.id || user?.id);
+  const earnedBonus = referrals.reduce(
+    (sum, r) => sum + (r.status === "rewarded" ? r.reward_amount_iqd : 0),
+    0,
+  );
+
+  useEffect(() => {
+    if (!user) return;
+    listReferrals(user.id)
+      .then(setReferrals)
+      .catch(() => undefined);
+  }, [user]);
+
+  const copyReferralLink = async () => {
+    if (!myReferralLink) return;
+    try {
+      await navigator.clipboard.writeText(myReferralLink);
+    } catch {
+      const el = document.createElement("textarea");
+      el.value = myReferralLink;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      el.remove();
+    }
+    setRefCopied(true);
+    toast.success("تم نسخ رابط الدعوة", {
+      description: "شاركه مع أصدقائك واحصل على المكافأة.",
+    });
+    setTimeout(() => setRefCopied(false), 1800);
+  };
 
   useEffect(() => {
     let active = true;
@@ -236,6 +278,48 @@ export function ProfilePage() {
             </div>
           ))}
         </div>
+
+        {/* Invite friends (referral engine) */}
+        <section className="mt-5 rounded-3xl border border-primary/20 bg-primary/[.04] p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-2 text-sm font-bold text-foreground">
+                <Gift size={17} className="text-primary" /> ادعُ أصدقاءك واحصل على مكافأة
+              </p>
+              <p className="mt-2 text-xs leading-6 text-muted-foreground">
+                شارك رابطك الخاص، وعند أول إيداع معتمد لصديقك تكسب{" "}
+                <b className="text-primary">{REFERRAL_BONUS_PERCENT}٪</b> من مبلغ إيداعه تلقائياً في
+                محفظتك.
+              </p>
+              <div className="mt-4">
+                <code
+                  dir="ltr"
+                  className="block truncate rounded-xl border border-border bg-background px-4 py-3 text-left font-mono text-xs font-bold text-foreground"
+                >
+                  {myReferralLink || "—"}
+                </code>
+                <button
+                  onClick={copyReferralLink}
+                  disabled={!myReferralLink}
+                  className="mt-3 flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground transition hover:brightness-110 disabled:opacity-50"
+                >
+                  {refCopied ? <Check size={14} /> : <Copy size={14} />}
+                  {refCopied ? "تم النسخ" : "نسخ رابط الدعوة"}
+                </button>
+              </div>
+            </div>
+            <div className="grid shrink-0 grid-cols-2 gap-3 sm:min-w-[260px]">
+              <div className="rounded-2xl border border-border bg-card p-4 text-center">
+                <p className="text-2xl font-extrabold text-foreground">{referrals.length}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">الأصدقاء المدعوون</p>
+              </div>
+              <div className="rounded-2xl border border-border bg-card p-4 text-center">
+                <p className="text-2xl font-extrabold text-primary">{formatIQD(earnedBonus)}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">المكافآت المكتسبة</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {profile?.is_banned && (
           <div className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-600 dark:text-red-300">

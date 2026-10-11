@@ -3,18 +3,20 @@ import { Check, Copy, Gift, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
+import { REFERRAL_BONUS_PERCENT } from "@/lib/constants";
 
 export function InviteModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { profile, user } = useAuth();
   const [link, setLink] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const code = (profile?.id || user?.id || "guest").replace(/-/g, "").slice(0, 8).toUpperCase();
+  const myId = profile?.id || user?.id || "";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setLink(`${window.location.origin}/?ref=${code}`);
-  }, [code]);
+    if (myId) setLink(`${window.location.origin}/ref/${myId}`);
+    else setLink("");
+  }, [myId]);
 
   const copy = async () => {
     try {
@@ -60,7 +62,8 @@ export function InviteModal({ open, onClose }: { open: boolean; onClose: () => v
           </div>
           <h2 className="mt-5 text-lg font-bold text-white">ادعُ صديقك واحصل على مكافأة</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            شارك رابط الدعوة الخاص بك، وعند أول عملية شراء لصديقك تُضاف المكافأة تلقائياً إلى
+            شارك رابط الدعوة الخاص بك، وعند أول إيداع معتمد لصديقك (إضافة رصيد) تُضاف مكافأة{" "}
+            <b className="text-emerald-300">{REFERRAL_BONUS_PERCENT}٪</b> من المبلغ تلقائياً إلى
             محفظتك.
           </p>
 
@@ -70,13 +73,14 @@ export function InviteModal({ open, onClose }: { open: boolean; onClose: () => v
               dir="ltr"
               className="mt-2 block truncate font-mono text-xs font-bold text-emerald-300"
             >
-              {link}
+              {link || "—"}
             </code>
           </div>
 
           <button
             onClick={copy}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-300"
+            disabled={!link}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-50"
           >
             {copied ? <Check size={17} /> : <Copy size={17} />} {copied ? "تم النسخ" : "نسخ الرابط"}
           </button>

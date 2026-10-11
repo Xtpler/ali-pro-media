@@ -96,6 +96,19 @@ create table if not exists public.password_reset_otps (
   created_at timestamptz not null default now()
 );
 
+-- نظام الإحالة: كل مستخدم له رابط دعوة فريد /ref/<user-id>
+create table if not exists public.referrals (
+  id uuid primary key default gen_random_uuid(),
+  referrer_id uuid not null references auth.users(id) on delete cascade,
+  referred_user_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','rewarded')),
+  reward_amount_iqd numeric not null default 0,
+  created_at timestamptz not null default now(),
+  unique (referrer_id, referred_user_id)
+);
+create index if not exists referrals_referrer_idx on public.referrals (referrer_id, created_at desc);
+create index if not exists referrals_referred_idx on public.referrals (referred_user_id, created_at desc);
+
 -- ============================================================================
 -- 2) إضافة الأعمدة الناقصة إلى الجداول الموجودة (idempotent)
 -- ============================================================================
@@ -527,6 +540,66 @@ end $$;
 revoke all on function public.admin_adjust_wallet(uuid, numeric, text) from public, anon;
 grant execute on function public.admin_adjust_wallet(uuid, numeric, text) to authenticated;
 
+-- ============================================================================
+-- نظام الإحالة (Referral Engine)
+-- ----------------------------------------------------------------------------
+-- • كل مستخدم له رابط دعوة فريد: /ref/<user-id>
+-- • عند فتح الرابط من مستخدم مسجّل يُسجَّل كإحالة بحالة pending عبر
+--   apply_referral (يدعو إليها التطبيق من صفحة /ref).
+-- • عند أول إيداع معتمد (status = 'approved') للصديق المدعو تُضاف مكافأة
+--   للداعي تلقائياً عبر مشغّل maybe_reward_referral على جدول deposit_requests.
+-- • نسبة المكافأة قابلة للتهيئة من ثابت bonus_pct داخل maybe_reward_referral.
+-- ============================================================================
+
+-- تسجيل الإحالة (يستدعيها التطبيق من صفحة /ref/<id>)
+create or replace function public.apply_referral(_referrer_id uuid)
+returns text language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid(); cnt int;
+begin
+  if me is null then return 'needs_auth'; end if;
+  if _referrer_id is null or _referrer_id = me then return 'self'; end if;
+  if not exists (select 1 from auth.users where id = _referrer_id) then return 'invalid'; end if;
+  select count(*) into cnt from public.referrals where referred_user_id = me;
+  if cnt > 0 then return 'already'; end if;
+  insert into public.referrals (referrer_id, referred_user_id) values (_referrer_id, me)
+  on conflict (referrer_id, referred_user_id) do nothing;
+  return 'ok';
+end $$;
+revoke all on function public.apply_referral(uuid) from public, anon;
+grant execute on function public.apply_referral(uuid) to authenticated;
+
+-- منح مكافأة الإحالة عند أول إيداع معتمد (تلقائياً عبر مشغّل الجدول)
+create or replace function public.maybe_reward_referral()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  ref_row public.referrals;
+  bonus numeric;
+  bonus_pct numeric := 10; -- نسبة مكافأة الإحالة القابلة للتهيئة (٪)
+begin
+  if NEW.user_id is null or coalesce(NEW.amount_iqd, 0) <= 0 then return NEW; end if;
+  select * into ref_row from public.referrals
+   where referred_user_id = NEW.user_id and status = 'pending'
+   limit 1;
+  if ref_row.id is null or ref_row.referrer_id = NEW.user_id then return NEW; end if;
+  bonus := floor(NEW.amount_iqd * bonus_pct / 100);
+  update public.referrals
+     set status = 'rewarded', reward_amount_iqd = bonus
+   where id = ref_row.id;
+  if bonus <= 0 then return NEW; end if;
+  perform public.credit_wallet(ref_row.referrer_id, bonus, 'مكافأة إحالة (٪' || bonus_pct || ')');
+  insert into public.notifications (user_id, audience, title, message, kind)
+  values (ref_row.referrer_id, 'user', '🎉 مكافأة إحالة',
+    'حصلت على مكافأة ' || bonus || ' د.ع إثر أول إيداع معتمد لصديقك المدعو', 'success');
+  return NEW;
+end $$;
+revoke all on function public.maybe_reward_referral() from public, anon;
+
+drop trigger if exists referral_reward on public.deposit_requests;
+create trigger referral_reward
+  after insert or update of status on public.deposit_requests
+  for each row when (NEW.status = 'approved')
+  execute function public.maybe_reward_referral();
+
 -- admin_review_unban (اعتماد / رفض طلبات فك الحظر)
 create or replace function public.admin_review_unban(_appeal_id uuid, _approve boolean, _note text default '')
 returns void language plpgsql security definer set search_path = public as $$
@@ -824,6 +897,17 @@ create policy "master manage roles" on public.user_roles
   for all to authenticated
   using (public.is_master_admin())
   with check (public.is_master_admin());
+
+-- referrals (قراءة الداعي والمدعو لإحالاتهم؛ التسجيل يتم عبر دالة أمنية فقط)
+grant select on public.referrals to authenticated;
+grant all on public.referrals to service_role;
+alter table public.referrals enable row level security;
+drop policy if exists "referrals own read" on public.referrals;
+create policy "referrals own read" on public.referrals for select to authenticated
+  using (referrer_id = auth.uid() or referred_user_id = auth.uid());
+drop policy if exists "referrals admin read" on public.referrals;
+create policy "referrals admin read" on public.referrals for select to authenticated
+  using (public.has_role(auth.uid(),'admin'));
 
 -- ============================================================================
 -- 6) حاويات التخزين (storage buckets) + سياسات الرفع
