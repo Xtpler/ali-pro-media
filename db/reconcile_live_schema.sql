@@ -142,6 +142,19 @@ alter table public.orders add column if not exists credentials text not null def
 alter table public.orders add column if not exists estimated_minutes int not null default 0;
 alter table public.orders add column if not exists started_at timestamptz;
 alter table public.orders add column if not exists completed_at timestamptz;
+alter table public.orders add column if not exists order_type text not null default 'service';
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'orders' and column_name = 'order_type'
+  ) then
+    -- العمود القديم order_type قد يكون NOT NULL بدون default → يفشل الطلب بـ:
+    --   null value in column "order_type" of relation "orders" violates not-null constraint
+    -- نمنحه default = 'service' حتى لا يفشل أي كاتب.
+    execute $x$ alter table public.orders alter column order_type set default 'service' $x$;
+  end if;
+end $$;
 
 -- support_tickets (دورة pending → open → closed)
 alter table public.support_tickets add column if not exists approved_at timestamptz;
@@ -419,7 +432,7 @@ create or replace function public.purchase_with_wallet(
   _buyer_name text, _buyer_phone text, _buyer_email text,
   _market_account_id uuid default null
 ) returns public.orders language plpgsql security definer set search_path = public as $$
-declare balance numeric; total numeric; qty int; unit numeric; new_order public.orders; acc public.market_accounts; secret text := '';
+declare balance numeric; total numeric; qty int; unit numeric; new_order public.orders; acc public.market_accounts; secret text := ''; otype text := 'service';
 begin
   if auth.uid() is null then raise exception 'unauthorized'; end if;
   if not public.check_rate_limit('purchase', 8, 60) then raise exception 'rate_limited'; end if;
@@ -439,12 +452,13 @@ begin
   if _market_account_id is not null then
     update public.market_accounts set sold = true, sold_to = auth.uid() where id = _market_account_id;
   end if;
+  otype := case when coalesce(_category,'digital_cards') = 'digital_cards' then 'card' else 'service' end;
   insert into public.orders (user_id, product_id, product_name, category, kind, target_link,
-    quantity, unit_price_iqd, price_iqd, buyer_name, buyer_phone, buyer_email, payment_method, status, credentials)
+    quantity, unit_price_iqd, price_iqd, buyer_name, buyer_phone, buyer_email, payment_method, status, credentials, order_type)
   values (auth.uid(), _product_id, coalesce(_product_name,''), coalesce(_category,'digital_cards'),
     coalesce(_kind,'service'), coalesce(_target_link,''), qty, unit, total,
     coalesce(_buyer_name,''), coalesce(_buyer_phone,''), coalesce(_buyer_email,''), 'wallet', 'pending',
-    coalesce(secret,''))
+    coalesce(secret,''), otype)
   returning * into new_order;
   insert into public.notifications (user_id, audience, title, message, kind)
   values (null, 'admin', 'طلب جديد', coalesce(_product_name,'') || ' بمبلغ ' || total || ' د.ع', 'info');
