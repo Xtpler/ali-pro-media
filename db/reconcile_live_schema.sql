@@ -156,6 +156,20 @@ begin
   end if;
 end $$;
 
+alter table public.orders add column if not exists total_price numeric not null default 0;
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'orders' and column_name = 'total_price'
+  ) then
+    -- العمود القديم total_price قد يكون NOT NULL بدون default → يفشل الطلب بـ:
+    --   null value in column "total_price" of relation "orders" violates not-null constraint
+    -- نمنحه default = 0 حتى لا يفشل أي كاتب (وكتبه purchase_with_wallet صراحةً كذلك).
+    execute $x$ alter table public.orders alter column total_price set default 0 $x$;
+  end if;
+end $$;
+
 -- support_tickets (دورة pending → open → closed)
 alter table public.support_tickets add column if not exists approved_at timestamptz;
 alter table public.support_tickets add column if not exists closed_at timestamptz;
@@ -454,9 +468,9 @@ begin
   end if;
   otype := case when coalesce(_category,'digital_cards') = 'digital_cards' then 'card' else 'service' end;
   insert into public.orders (user_id, product_id, product_name, category, kind, target_link,
-    quantity, unit_price_iqd, price_iqd, buyer_name, buyer_phone, buyer_email, payment_method, status, credentials, order_type)
+    quantity, unit_price_iqd, price_iqd, total_price, buyer_name, buyer_phone, buyer_email, payment_method, status, credentials, order_type)
   values (auth.uid(), _product_id, coalesce(_product_name,''), coalesce(_category,'digital_cards'),
-    coalesce(_kind,'service'), coalesce(_target_link,''), qty, unit, total,
+    coalesce(_kind,'service'), coalesce(_target_link,''), qty, unit, total, total,
     coalesce(_buyer_name,''), coalesce(_buyer_phone,''), coalesce(_buyer_email,''), 'wallet', 'pending',
     coalesce(secret,''), otype)
   returning * into new_order;

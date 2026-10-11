@@ -40,6 +40,8 @@
    - `orders.order_type` (القديم `NOT NULL` بدون default): يمنحه السكربت `default 'service'`،
      ويضيف العمود إن لم يكن موجوداً، و`purchase_with_wallet` يكتبه صراحةً
      (`'card'` لبطاقات الدفع الرقمية، و`'service'` لغيرها).
+   - `orders.total_price` (القديم `NOT NULL` بدون default): يمنحه السكربت `default 0`،
+     ويضيف العمود إن لم يكن موجوداً، و`purchase_with_wallet` يكتبه صراحةً = السعر الكلي.
 3. ينشئ/يعيد بناء الدوال التي يستدعيها التطبيق: `is_staff`, `is_master_admin`,
    `ensure_master_admin`, `set_updated_at`, `guard_wallet_balance`, `handle_new_user`,
    `check_rate_limit`, `credit_wallet`, `redeem_voucher`, `purchase_with_wallet`,
@@ -77,6 +79,7 @@
 | `null value in column "amount" of relation "wallet_transactions" violates not-null constraint` | العمود القديم `amount` `NOT NULL` بدون default بينما الكود يكتب `amount_iqd` | أعِد تشغيل السكربت (يمنح `default 0` ويضيف مُشغّل `sync_wallet_amount`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
 | `null value in column "transaction_type" of relation "wallet_transactions" violates not-null constraint` | العمود القديم `transaction_type` `NOT NULL` بدون default | أعِد تشغيل السكربت (يمنح `default 'purchase'`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
 | `null value in column "order_type" of relation "orders" violates not-null constraint` | العمود القديم `order_type` `NOT NULL` بدون default | أعِد تشغيل السكربت (يمنح `default 'service'`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
+| `null value in column "total_price" of relation "orders" violates not-null constraint` | العمود القديم `total_price` `NOT NULL` بدون default | أعِد تشغيل السكربت (يمنح `default 0`) ثم أعد تحميل التطبيق وجرّب الطلب مجدداً |
 
 ---
 
