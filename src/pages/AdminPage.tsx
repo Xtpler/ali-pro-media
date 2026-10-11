@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Ban,
   Check,
-  Coins,
   Edit3,
   Gift,
   ImagePlus,
@@ -78,6 +77,7 @@ import { Page, StatusPill } from "@/pages/OrdersPage";
 import { AdBoard } from "@/components/AdBoard";
 import { expectedMinutes, formatDuration } from "@/lib/orderProgress";
 import { AdminAccounts } from "@/components/AdminAccounts";
+import { AdminAnalytics } from "@/components/AdminAnalytics";
 
 type Tab =
   | "orders"
@@ -164,6 +164,8 @@ export function AdminPage() {
   const [adminReply, setAdminReply] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [walletEdit, setWalletEdit] = useState<{ target: Profile; amount: string } | null>(null);
+  const [walletBusy, setWalletBusy] = useState(false);
+  const [reviewingDep, setReviewingDep] = useState<string | null>(null);
   const [orderDelivery, setOrderDelivery] = useState<{
     order: Order;
     code: string;
@@ -266,6 +268,8 @@ export function AdminPage() {
 
   /* ------- Deposits queue ------- */
   const decideDeposit = async (deposit: Deposit, approve: boolean) => {
+    if (reviewingDep) return;
+    setReviewingDep(deposit.id);
     try {
       await reviewDeposit(deposit.id, approve);
       addNotification({
@@ -283,6 +287,8 @@ export function AdminPage() {
     } catch (e) {
       logError("admin.decideDeposit", e);
       toast.error(e instanceof Error ? e.message : "حدث خطأ");
+    } finally {
+      setReviewingDep(null);
     }
   };
 
@@ -582,9 +588,10 @@ export function AdminPage() {
   };
 
   const applyWallet = async (sign: 1 | -1) => {
-    if (!walletEdit) return;
+    if (!walletEdit || walletBusy) return;
     const amount = Number(walletEdit.amount.replace(/\D/g, ""));
     if (!amount) return;
+    setWalletBusy(true);
     try {
       if (!isSuperAdmin) throw new Error("إدارة أرصدة المحافظ متاحة للسوبر أدمن فقط");
       const target = walletEdit.target;
@@ -610,6 +617,8 @@ export function AdminPage() {
     } catch (e) {
       logError("admin.applyWallet", e);
       toast.error(e instanceof Error ? e.message : "حدث خطأ");
+    } finally {
+      setWalletBusy(false);
     }
   };
 
@@ -674,29 +683,16 @@ export function AdminPage() {
     `${p.full_name} ${p.email} ${p.phone}`.toLowerCase().includes(userSearch.toLowerCase()),
   );
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
-  const pendingDepositsList = deposits.filter((d) => d.status === "pending");
-  const pendingDeposits = pendingDepositsList.length;
-  const pendingDepositsTotal = pendingDepositsList.reduce((sum, d) => sum + d.amount_iqd, 0);
   const openTickets = tickets.filter((t) => t.status === "open").length;
-  const totalRevenue = orders
-    .filter((o) => o.status === "approved" || o.status === "completed" || o.status === "processing")
-    .reduce((sum, o) => sum + o.price_iqd, 0);
 
   return (
     <div className="admin-panel">
       <Page title="لوحة التحكم" subtitle="لوحة إدارة حديثة — بيانات مباشرة، أدوار، طلبات ودعم">
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Metric icon={<Wallet />} value={formatIQD(totalRevenue)} label="إجمالي الإيرادات" />
-          <Metric
-            icon={<Coins />}
-            value={`${pendingDeposits} · ${formatIQD(pendingDepositsTotal)}`}
-            label="الإيداعات المعلقة"
-          />
-          <Metric icon={<Megaphone />} value={openTickets} label="تذاكر الدعم النشطة" />
-        </div>
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <AdminAnalytics orders={orders} profiles={profiles} deposits={deposits} />
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <Metric icon={<Users />} value={profiles.length} label="عدد المستخدمين" />
           <Metric icon={<ShoppingBag />} value={pendingOrders} label="طلبات معلقة" />
+          <Metric icon={<Megaphone />} value={openTickets} label="تذاكر الدعم النشطة" />
           <Metric icon={<Package />} value={products.length} label="منتج" />
           <Metric icon={<Megaphone />} value={banners.length} label="إعلان" />
         </div>
@@ -893,13 +889,20 @@ export function AdminPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => decideDeposit(d, true)}
-                            className="flex items-center gap-1 rounded-lg bg-emerald-400 px-3 py-2 text-[11px] font-bold text-slate-950"
+                            disabled={reviewingDep !== null}
+                            className="flex items-center gap-1 rounded-lg bg-emerald-400 px-3 py-2 text-[11px] font-bold text-slate-950 disabled:opacity-50"
                           >
-                            <Check size={13} /> موافقة
+                            {reviewingDep === d.id ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                              <Check size={13} />
+                            )}{" "}
+                            موافقة
                           </button>
                           <button
                             onClick={() => decideDeposit(d, false)}
-                            className="flex items-center gap-1 rounded-lg bg-red-400/15 px-3 py-2 text-[11px] font-bold text-red-300"
+                            disabled={reviewingDep !== null}
+                            className="flex items-center gap-1 rounded-lg bg-red-400/15 px-3 py-2 text-[11px] font-bold text-red-300 disabled:opacity-50"
                           >
                             <X size={13} /> رفض
                           </button>
@@ -1544,13 +1547,20 @@ export function AdminPage() {
                   <div className="mt-4 flex gap-2">
                     <button
                       onClick={() => applyWallet(1)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3 text-xs font-bold text-slate-950"
+                      disabled={walletBusy}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3 text-xs font-bold text-slate-950 disabled:opacity-50"
                     >
-                      <Plus size={15} /> إضافة رصيد
+                      {walletBusy ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Plus size={15} />
+                      )}{" "}
+                      إضافة رصيد
                     </button>
                     <button
                       onClick={() => applyWallet(-1)}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-400/15 py-3 text-xs font-bold text-red-300"
+                      disabled={walletBusy}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-400/15 py-3 text-xs font-bold text-red-300 disabled:opacity-50"
                     >
                       <Minus size={15} /> سحب رصيد
                     </button>
