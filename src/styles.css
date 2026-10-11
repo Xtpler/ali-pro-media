@@ -1516,7 +1516,7 @@ button {
   animation: motionPop 0.4s cubic-bezier(0.2, 1.2, 0.3, 1) both;
 }
 .motion-rise {
-  animation: motionSlideIn 0.5s ease both;
+  animation: motionSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .motion-slide {
   animation: motionSlideStart 0.45s ease both;
@@ -1779,7 +1779,7 @@ button {
     ),
     radial-gradient(
       42% 42% at 62% 82%,
-      color-mix(in oklab, #38bdf8 13%, transparent),
+      color-mix(in oklab, var(--color-chart-2) 13%, transparent),
       transparent 66%
     );
   filter: blur(14px);
@@ -1859,24 +1859,24 @@ button {
   background: linear-gradient(
     115deg,
     var(--color-primary) 0%,
-    color-mix(in oklab, var(--color-primary) 55%, #7dd3fc) 100%
+    color-mix(in oklab, var(--color-primary) 55%, var(--color-chart-2)) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-/* --- Glass surfaces --- */
+/* --- Glass surfaces (colors via --fx-* tokens so light/dark flips in one place) --- */
 .glass-card {
   position: relative;
   border-radius: 1.5rem;
-  border: 1px solid color-mix(in oklab, var(--color-foreground) 10%, transparent);
-  background: color-mix(in oklab, var(--color-card) 72%, transparent);
+  border: 1px solid var(--fx-card-border);
+  background: var(--fx-card-bg);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
   box-shadow:
-    0 24px 60px -40px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 color-mix(in oklab, #ffffff 8%, transparent);
+    var(--fx-card-shadow),
+    inset 0 1px 0 var(--fx-card-sheen);
   transition:
     transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
     border-color 0.35s ease,
@@ -1888,30 +1888,17 @@ button {
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(
-    160deg,
-    color-mix(in oklab, #ffffff 9%, transparent),
-    transparent 42%
-  );
+  background: linear-gradient(160deg, var(--fx-card-sheen), transparent 42%);
 }
 .glass-card:hover {
   transform: translateY(-4px);
   border-color: color-mix(in oklab, var(--color-primary) 42%, transparent);
   box-shadow:
     0 34px 80px -46px color-mix(in oklab, var(--color-primary) 80%, transparent),
-    inset 0 1px 0 color-mix(in oklab, #ffffff 10%, transparent);
+    inset 0 1px 0 var(--fx-card-sheen);
 }
 .glass-card--flat:hover {
   transform: none;
-}
-.light .glass-card {
-  background: color-mix(in oklab, #ffffff 82%, transparent);
-  box-shadow:
-    0 24px 60px -46px rgba(15, 23, 42, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-.light .glass-card::before {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.65), transparent 46%);
 }
 
 /* --- Buttons --- */
@@ -2018,5 +2005,153 @@ button {
   .glass-card:hover,
   .btn-glow:hover {
     transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME MOTION LAYER — tilt, orbit, shimmer, parallax helpers and below-the-fold
+   rendering hints. All colors derive from design tokens; infinite loops are
+   CSS-only so prefers-reduced-motion can freeze them without touching inline
+   styles. Framed Framer Motion work lives in src/components/home/motion.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- Motion tokens: glass surfaces flip per theme in one place --- */
+:root {
+  --fx-card-bg: color-mix(in oklab, var(--color-card) 72%, transparent);
+  --fx-card-border: color-mix(in oklab, var(--color-foreground) 10%, transparent);
+  --fx-card-sheen: color-mix(in oklab, #ffffff 9%, transparent);
+  --fx-card-shadow: 0 24px 60px -40px color-mix(in oklab, #000 55%, transparent);
+}
+.light {
+  --fx-card-bg: color-mix(in oklab, #ffffff 82%, transparent);
+  --fx-card-sheen: color-mix(in oklab, #ffffff 65%, transparent);
+  --fx-card-shadow: 0 24px 60px -46px color-mix(in oklab, #0f172a 28%, transparent);
+}
+
+/* --- Orbiting brand-icon cluster (hero) --- */
+.orbit-ring {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  will-change: transform;
+  animation: orbitSpin 30s linear infinite;
+}
+.orbit-item {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  transform: rotate(var(--angle, 0deg)) translateX(110px) rotate(calc(var(--angle, 0deg) * -1));
+}
+.orbit-item-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in oklab, var(--color-primary) 32%, transparent);
+  background: color-mix(in oklab, var(--color-card) 70%, transparent);
+  color: var(--color-primary);
+  box-shadow: 0 12px 32px -14px color-mix(in oklab, var(--color-primary) 70%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: orbitSpin 30s linear infinite reverse;
+}
+@keyframes orbitSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Shimmering key word (hero + final CTA) --- */
+.shimmer-text {
+  background-image: linear-gradient(
+    110deg,
+    var(--color-primary) 28%,
+    color-mix(in oklab, var(--color-primary) 45%, var(--color-chart-2)) 50%,
+    var(--color-primary) 72%
+  );
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: textShimmer 6s ease-in-out infinite;
+}
+@keyframes textShimmer {
+  0%,
+  100% {
+    background-position: 130% 0;
+  }
+  50% {
+    background-position: -130% 0;
+  }
+}
+
+/* --- Soft levitating badges / pills --- */
+.fx-float {
+  animation: fxFloat 5s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes fxFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* --- Tilt glare overlay (TiltCard) --- */
+.tilt-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* --- Hero SVG growth chart --- */
+.chart-line {
+  stroke: var(--color-primary);
+  fill: none;
+  stroke-linecap: round;
+}
+.chart-area {
+  fill: url(#homeChartFill);
+}
+.chart-dot {
+  fill: var(--color-primary);
+  stroke: var(--color-background);
+  stroke-width: 2;
+}
+.chart-grid-h {
+  stroke: color-mix(in oklab, var(--color-foreground) 8%, transparent);
+  stroke-dasharray: 3 6;
+}
+
+/* --- Below-the-fold sections: render on demand, space reserved (no CLS) --- */
+.lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 760px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring,
+  .orbit-item-inner,
+  .fx-float,
+  .shimmer-text {
+    animation: none !important;
+  }
+  /* Static fallback for the SVG growth chart: show it fully drawn, no stroke dance. */
+  .chart-line {
+    stroke-dasharray: none !important;
+  }
+  .chart-area,
+  .chart-dot {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

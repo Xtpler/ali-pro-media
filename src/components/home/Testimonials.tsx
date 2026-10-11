@@ -43,7 +43,7 @@ const TESTIMONIALS = [
 
 export function Testimonials() {
   return (
-    <section className="home-section home-container" aria-label="آراء العملاء">
+    <section className="home-section home-container lazy-section" aria-label="آراء العملاء">
       <SectionHeading
         eyebrow="آراء العملاء"
         title="آلاف العملاء يثقون بنا"

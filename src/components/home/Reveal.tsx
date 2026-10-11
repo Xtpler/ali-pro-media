@@ -1,49 +1,37 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { m } from "framer-motion";
+import type { ReactNode } from "react";
 
 /**
- * Wraps content and fades/slides it in the first time it scrolls into view.
- * Falls back to "always visible" when IntersectionObserver is unavailable and
- * disables the motion entirely under `prefers-reduced-motion` (handled in CSS).
+ * Fade/slide reveal the first time the content scrolls into view. Animates
+ * transform + opacity only, runs once, and honors `prefers-reduced-motion`
+ * through <MotionConfig reducedMotion="user">.
  */
 export function Reveal({
   children,
   delay = 0,
   className,
+  x = 0,
+  y = 24,
+  once = true,
+  amount = 0.15,
 }: {
   children: ReactNode;
   delay?: number;
   className?: string;
+  x?: number;
+  y?: number;
+  once?: boolean;
+  amount?: number;
 }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <div
-      ref={ref}
-      className={`reveal ${visible ? "is-visible" : ""} ${className ?? ""}`.trim()}
-      style={delay ? ({ "--d": `${delay}s` } as CSSProperties) : undefined}
+    <m.div
+      className={className}
+      initial={{ opacity: 0, x, y }}
+      whileInView={{ opacity: 1, x: 0, y: 0 }}
+      viewport={{ once, amount }}
+      transition={{ duration: 0.65, delay, ease: [0.21, 0.61, 0.35, 1] }}
     >
       {children}
-    </div>
+    </m.div>
   );
 }

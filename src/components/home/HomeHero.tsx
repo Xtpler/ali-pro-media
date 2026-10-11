@@ -1,3 +1,4 @@
+import { m } from "framer-motion";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -9,10 +10,13 @@ import {
   Zap,
 } from "lucide-react";
 import { CountUp } from "@/components/home/CountUp";
+import { MagneticButton } from "@/components/home/motion/MagneticButton";
+import { OrbitIcons } from "@/components/home/motion/OrbitIcons";
+import { Parallax } from "@/components/home/motion/Parallax";
+import { TiltCard } from "@/components/home/motion/TiltCard";
 import { formatIQD } from "@/lib/format";
 
 const AVATARS = ["ع ح", "م ك", "س أ", "ر ط"] as const;
-const BARS = [34, 48, 40, 62, 54, 74, 92] as const;
 const FEED: { name: string; label: string; status: string; cls: string }[] = [
   { name: "متابعون إنستغرام", label: "١٠٠٠ متابع", status: "مكتمل", cls: "order-status-completed" },
   {
@@ -22,6 +26,14 @@ const FEED: { name: string; label: string; status: string; cls: string }[] = [
     cls: "order-status-processing",
   },
   { name: "حساب موثّق", label: "يوتيوب", status: "قيد الانتظار", cls: "order-status-pending" },
+];
+
+const CHART_LINE = "M0 92 L40 76 L80 84 L120 56 L160 64 L200 38 L240 46 L280 20 L320 28";
+const CHART_AREA = `${CHART_LINE} L320 104 L0 104 Z`;
+const CHART_DOTS: [number, number][] = [
+  [120, 56],
+  [200, 38],
+  [280, 20],
 ];
 
 export function HomeHero({ onStart, onBrowse }: { onStart: () => void; onBrowse: () => void }) {
@@ -36,7 +48,7 @@ export function HomeHero({ onStart, onBrowse }: { onStart: () => void; onBrowse:
 
           <h1 className="mt-6 font-display text-[2.1rem] font-extrabold leading-[1.24] text-foreground sm:text-5xl lg:text-[3.5rem]">
             كل خدماتك الرقمية
-            <span className="gradient-text"> في مكان واحد.</span>
+            <span className="shimmer-text"> في مكان واحد.</span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg lg:mx-0">
@@ -45,13 +57,15 @@ export function HomeHero({ onStart, onBrowse }: { onStart: () => void; onBrowse:
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-            <button
-              type="button"
-              onClick={onStart}
-              className="btn-glow inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-4 text-sm font-extrabold text-primary-foreground"
-            >
-              ابدأ الآن <ArrowLeft size={18} />
-            </button>
+            <MagneticButton className="inline-flex" strength={0.16}>
+              <button
+                type="button"
+                onClick={onStart}
+                className="btn-glow inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-4 text-sm font-extrabold text-primary-foreground"
+              >
+                ابدأ الآن <ArrowLeft size={18} />
+              </button>
+            </MagneticButton>
             <button
               type="button"
               onClick={onBrowse}
@@ -82,7 +96,7 @@ export function HomeHero({ onStart, onBrowse }: { onStart: () => void; onBrowse:
               <p className="mt-0.5 text-xs text-muted-foreground">
                 أكثر من{" "}
                 <b className="text-foreground">
-                  <CountUp value={12000} prefix="+" />
+                  <CountUp value={12400} prefix="+" />
                 </b>{" "}
                 عميل يثق بنا
               </p>
@@ -109,20 +123,22 @@ export function HomeHero({ onStart, onBrowse }: { onStart: () => void; onBrowse:
           </ul>
         </div>
 
-        <HeroPanel />
+        <HeroVisual />
       </div>
     </section>
   );
 }
 
-function HeroPanel() {
+function HeroVisual() {
   return (
-    <div className="relative">
+    <Parallax offset={26} className="relative mx-auto w-full max-w-md lg:max-w-none">
       <div
-        className="pointer-events-none absolute -inset-6 -z-10 rounded-[3rem] bg-primary/20 blur-3xl"
+        className="pointer-events-none absolute -inset-8 -z-10 rounded-[3rem] bg-primary/20 blur-3xl"
         aria-hidden
       />
-      <div className="glass-card glass-card--flat p-5 sm:p-6">
+      <OrbitIcons className="pointer-events-none absolute -top-12 -right-8 z-0 hidden lg:block" />
+
+      <TiltCard className="glass-card glass-card--flat relative z-10 p-5 sm:p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_14px_var(--color-primary)]" />
@@ -146,17 +162,17 @@ function HeroPanel() {
           </div>
         </div>
 
-        <div className="mt-4 flex h-24 items-end gap-1.5" aria-hidden>
-          {BARS.map((height, index) => (
-            <span
-              key={index}
-              className="flex-1 rounded-t-md bg-gradient-to-t from-primary/20 to-primary"
-              style={{ height: `${height}%` }}
-            />
-          ))}
+        <div className="mt-4 rounded-2xl border border-border bg-background/40 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">نمو الطلبات</p>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary">
+              <TrendingUp size={13} /> +38%
+            </span>
+          </div>
+          <RevenueChart />
         </div>
 
-        <div className="mt-5 space-y-2">
+        <div className="mt-4 space-y-2">
           {FEED.map((row) => (
             <div
               key={row.name}
@@ -170,14 +186,65 @@ function HeroPanel() {
             </div>
           ))}
         </div>
-      </div>
+      </TiltCard>
 
-      <span className="glass-card glass-card--flat absolute -right-2 top-20 hidden items-center gap-2 px-3 py-2 text-[11px] font-bold text-foreground lg:flex">
+      <span className="glass-card glass-card--flat fx-float absolute -right-2 top-20 z-20 hidden items-center gap-2 px-3 py-2 text-[11px] font-bold text-foreground lg:flex">
         <ShieldCheck size={15} className="text-primary" /> دفع آمن
       </span>
-      <span className="glass-card glass-card--flat absolute -left-2 bottom-24 hidden items-center gap-2 px-3 py-2 text-[11px] font-bold text-foreground lg:flex">
+      <span
+        className="glass-card glass-card--flat fx-float absolute -left-2 bottom-24 z-20 hidden items-center gap-2 px-3 py-2 text-[11px] font-bold text-foreground lg:flex"
+        style={{ animationDelay: "-2.4s" }}
+      >
         <BadgeCheck size={15} className="text-primary" /> تسليم مضمون
       </span>
-    </div>
+    </Parallax>
+  );
+}
+
+function RevenueChart() {
+  return (
+    <svg viewBox="0 0 320 104" className="mt-1 h-24 w-full" aria-hidden>
+      <defs>
+        <linearGradient id="homeChartFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" style={{ stopColor: "var(--color-primary)", stopOpacity: 0.34 }} />
+          <stop offset="100%" style={{ stopColor: "var(--color-primary)", stopOpacity: 0 }} />
+        </linearGradient>
+      </defs>
+      <line className="chart-grid-h" x1="0" y1="26" x2="320" y2="26" />
+      <line className="chart-grid-h" x1="0" y1="60" x2="320" y2="60" />
+      <line className="chart-grid-h" x1="0" y1="92" x2="320" y2="92" />
+      <m.path
+        className="chart-area"
+        d={CHART_AREA}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1, delay: 0.9 }}
+      />
+      <m.path
+        className="chart-line"
+        style={{ strokeWidth: 3 }}
+        d={CHART_LINE}
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 1.6, ease: "easeOut" }}
+      />
+      {CHART_DOTS.map(([cx, cy], index) => (
+        <m.circle
+          key={index}
+          className="chart-dot"
+          cx={cx}
+          cy={cy}
+          r={3.5}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            delay: 0.55 + index * 0.22,
+            type: "spring",
+            stiffness: 400,
+            damping: 18,
+          }}
+        />
+      ))}
+    </svg>
   );
 }

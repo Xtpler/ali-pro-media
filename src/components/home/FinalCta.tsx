@@ -1,9 +1,10 @@
 import { ArrowLeft, Headphones, ShieldCheck, Zap } from "lucide-react";
 import { Reveal } from "@/components/home/Reveal";
+import { MagneticButton } from "@/components/home/motion/MagneticButton";
 
 export function FinalCta({ onStart, onSupport }: { onStart: () => void; onSupport: () => void }) {
   return (
-    <section className="home-container pb-20 pt-4" aria-label="ابدأ الآن">
+    <section className="home-container lazy-section pb-20 pt-4" aria-label="ابدأ الآن">
       <Reveal>
         <div className="glass-card relative overflow-hidden px-6 py-14 text-center sm:px-12 sm:py-16">
           <div
@@ -16,20 +17,22 @@ export function FinalCta({ onStart, onSupport }: { onStart: () => void; onSuppor
               جاهز للانطلاق؟
             </span>
             <h2 className="mx-auto mt-5 max-w-2xl font-display text-3xl font-extrabold leading-[1.3] text-foreground sm:text-4xl">
-              ابدأ اليوم وانمُ حضورك الرقمي <span className="gradient-text">باحترافية.</span>
+              ابدأ اليوم وانمُ حضورك الرقمي <span className="shimmer-text">باحترافية.</span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-muted-foreground sm:text-base">
               أنشئ حسابك مجاناً، اشحن محفظتك، واطلب أول خدمة خلال دقائق.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={onStart}
-                className="btn-glow inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-4 text-sm font-extrabold text-primary-foreground"
-              >
-                ابدأ الآن <ArrowLeft size={18} />
-              </button>
+              <MagneticButton className="inline-flex" strength={0.14}>
+                <button
+                  type="button"
+                  onClick={onStart}
+                  className="btn-glow inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-4 text-sm font-extrabold text-primary-foreground"
+                >
+                  ابدأ الآن <ArrowLeft size={18} />
+                </button>
+              </MagneticButton>
               <button
                 type="button"
                 onClick={onSupport}

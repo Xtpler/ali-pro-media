@@ -37,7 +37,7 @@ const FAQ = [
 
 export function Faq() {
   return (
-    <section className="home-section home-container" aria-label="الأسئلة الشائعة">
+    <section className="home-section home-container lazy-section" aria-label="الأسئلة الشائعة">
       <SectionHeading
         eyebrow="الأسئلة الشائعة"
         title="كل ما تريد معرفته"

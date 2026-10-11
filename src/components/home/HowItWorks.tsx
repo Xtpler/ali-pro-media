@@ -1,6 +1,8 @@
+import { m } from "framer-motion";
 import { Rocket, UserPlus, Wallet } from "lucide-react";
 import { Reveal } from "@/components/home/Reveal";
 import { SectionHeading } from "@/components/home/SectionHeading";
+import { TiltCard } from "@/components/home/motion/TiltCard";
 
 const STEPS = [
   {
@@ -22,7 +24,7 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section className="home-section home-container" aria-label="كيف تعمل المنصة">
+    <section className="home-section home-container lazy-section" aria-label="كيف تعمل المنصة">
       <SectionHeading
         eyebrow="خطوات بسيطة"
         title="ابدأ في ثلاث خطوات فقط"
@@ -30,8 +32,13 @@ export function HowItWorks() {
       />
 
       <div className="relative mt-14">
-        <div
+        <m.div
           className="step-connector pointer-events-none absolute inset-x-[16%] top-[3.25rem] hidden h-px lg:block"
+          style={{ transformOrigin: "100% 50%" }}
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true, amount: 0.5 }}
+          transition={{ duration: 0.9, ease: "easeOut", delay: 0.25 }}
           aria-hidden
         />
         <div className="grid gap-5 lg:grid-cols-3">
@@ -39,20 +46,22 @@ export function HowItWorks() {
             const Icon = step.icon;
             return (
               <Reveal key={step.title} delay={index * 0.12} className="h-full">
-                <article className="glass-card relative flex h-full flex-col items-center p-7 text-center">
-                  <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/25 bg-background text-primary shadow-[0_0_30px_-10px_var(--color-primary)]">
-                    <Icon size={26} />
-                  </span>
-                  <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-background/50 px-3 py-1 text-[10px] font-extrabold text-muted-foreground">
-                    الخطوة {index + 1}
-                  </span>
-                  <h3 className="mt-4 font-display text-lg font-extrabold text-foreground">
-                    {step.title}
-                  </h3>
-                  <p className="mt-2 max-w-xs text-xs leading-6 text-muted-foreground">
-                    {step.text}
-                  </p>
-                </article>
+                <TiltCard className="h-full" max={5}>
+                  <article className="glass-card relative flex h-full flex-col items-center p-7 text-center">
+                    <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/25 bg-background text-primary shadow-[0_0_30px_-10px_var(--color-primary)]">
+                      <Icon size={26} />
+                    </span>
+                    <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-background/50 px-3 py-1 text-[10px] font-extrabold text-muted-foreground">
+                      الخطوة {index + 1}
+                    </span>
+                    <h3 className="mt-4 font-display text-lg font-extrabold text-foreground">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 max-w-xs text-xs leading-6 text-muted-foreground">
+                      {step.text}
+                    </p>
+                  </article>
+                </TiltCard>
               </Reveal>
             );
           })}
