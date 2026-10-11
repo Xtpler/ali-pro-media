@@ -28,28 +28,23 @@ import {
 } from "@/lib/orderProgress";
 import type { Deposit, Order, OrderStatus } from "@/types";
 import { Attachment } from "@/components/Attachment";
+import { OrderReceiptModal } from "@/components/OrderReceiptModal";
 
 const STATUS_LABEL: Record<string, { text: string; className: string }> = {
   pending: {
     text: "قيد المراجعة",
-    className: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+    className: "order-status-pending",
   },
-  approved: { text: "تمت الموافقة", className: "bg-primary/15 text-primary" },
-  completed: { text: "مكتمل", className: "bg-primary/15 text-primary" },
-  processing: { text: "قيد التنفيذ", className: "bg-sky-500/15 text-sky-600 dark:text-sky-300" },
-  cancelled: { text: "ملغى", className: "bg-red-500/15 text-red-600 dark:text-red-300" },
-  rejected: { text: "مرفوض", className: "bg-red-500/15 text-red-600 dark:text-red-300" },
+  approved: { text: "تمت الموافقة", className: "order-status-approved" },
+  completed: { text: "مكتمل", className: "order-status-completed" },
+  processing: { text: "قيد التنفيذ", className: "order-status-processing" },
+  cancelled: { text: "ملغى", className: "order-status-cancelled" },
+  rejected: { text: "مرفوض", className: "order-status-rejected" },
 };
 
 export function StatusPill({ status }: { status: OrderStatus | string }) {
   const item = STATUS_LABEL[status] ?? STATUS_LABEL["pending"]!;
-  return (
-    <span
-      className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-bold ${item.className}`}
-    >
-      {item.text}
-    </span>
-  );
+  return <span className={`status-badge ${item.className}`}>{item.text}</span>;
 }
 
 function useNow(ms = 20000) {
@@ -63,6 +58,7 @@ function useNow(ms = 20000) {
 
 function OrderTracker({ order, now }: { order: Order; now: number }) {
   const [reveal, setReveal] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const failed = isFailed(order.status);
   const done = order.status === "completed";
   const pct = progressPercent(order, now);
@@ -193,7 +189,18 @@ function OrderTracker({ order, now }: { order: Order; now: number }) {
             )}
           </div>
         )}
+
+        {done && (
+          <button
+            onClick={() => setReceiptOpen(true)}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-xs font-bold text-primary transition hover:bg-primary/10"
+          >
+            <ReceiptText size={15} /> طباعة / تحميل الإيصال
+          </button>
+        )}
       </div>
+
+      {receiptOpen && <OrderReceiptModal order={order} onClose={() => setReceiptOpen(false)} />}
     </article>
   );
 }

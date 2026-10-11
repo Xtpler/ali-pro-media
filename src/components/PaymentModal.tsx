@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Check, Copy, Hash, Link2, Loader2, ShoppingCart, Wallet, X } from "lucide-react";
 import type { Product } from "@/types";
 import { formatIQD } from "@/lib/format";
@@ -26,6 +26,7 @@ export function PaymentModal({
   const [link, setLink] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -61,14 +62,17 @@ export function PaymentModal({
   };
 
   const askConfirm = () => {
+    if (busy || busyRef.current) return;
     setError("");
     if (!validate()) return;
     setConfirming(true);
   };
 
   const submit = async () => {
+    if (busyRef.current) return;
     setError("");
     if (!validate()) return;
+    busyRef.current = true;
     setConfirming(false);
     setBusy(true);
     try {
@@ -98,6 +102,7 @@ export function PaymentModal({
       setError(message);
       toast.error(message);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
@@ -186,6 +191,7 @@ export function PaymentModal({
               <input
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
+                disabled={busy}
                 dir="ltr"
                 placeholder={
                   isSocial ? "https://instagram.com/username" : "ID أو البريد المرتبط بالحساب"
@@ -206,7 +212,8 @@ export function PaymentModal({
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="h-11 w-11 rounded-xl border border-white/10 bg-white/[.05] text-lg text-white"
+                  disabled={busy}
+                  className="h-11 w-11 rounded-xl border border-white/10 bg-white/[.05] text-lg text-white disabled:opacity-50"
                 >
                   −
                 </button>
@@ -215,12 +222,14 @@ export function PaymentModal({
                   onChange={(e) =>
                     setQuantity(Math.max(1, Number(e.target.value.replace(/\D/g, "")) || 1))
                   }
+                  disabled={busy}
                   dir="ltr"
                   className="h-11 flex-1 rounded-xl border border-white/10 bg-white/[.04] text-center text-sm font-bold text-white outline-none focus:border-emerald-400/50"
                 />
                 <button
                   onClick={() => setQuantity((q) => q + 1)}
-                  className="h-11 w-11 rounded-xl border border-white/10 bg-white/[.05] text-lg text-white"
+                  disabled={busy}
+                  className="h-11 w-11 rounded-xl border border-white/10 bg-white/[.05] text-lg text-white disabled:opacity-50"
                 >
                   +
                 </button>
@@ -286,7 +295,8 @@ export function PaymentModal({
               </button>
               <button
                 onClick={() => setConfirming(false)}
-                className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white"
+                disabled={busy}
+                className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white disabled:opacity-50"
               >
                 إلغاء
               </button>

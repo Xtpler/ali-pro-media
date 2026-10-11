@@ -45,6 +45,7 @@ export function DepositModal({
   };
 
   const submit = async () => {
+    if (busy) return;
     setError("");
     const value = Number(amount.replace(/\D/g, ""));
     if (!value || value < 1000) {
@@ -145,7 +146,8 @@ export function DepositModal({
                   <button
                     key={g.id}
                     onClick={() => setGateway(g.id)}
-                    className={`rounded-xl border p-3 text-right text-xs font-bold transition ${gateway === g.id ? "border-emerald-400 bg-emerald-400/10 text-emerald-300" : "border-white/10 bg-white/[.03] text-slate-400 hover:border-white/20"}`}
+                    disabled={busy}
+                    className={`rounded-xl border p-3 text-right text-xs font-bold transition disabled:opacity-50 ${gateway === g.id ? "border-emerald-400 bg-emerald-400/10 text-emerald-300" : "border-white/10 bg-white/[.03] text-slate-400 hover:border-white/20"}`}
                   >
                     {g.label_ar}
                   </button>
@@ -182,6 +184,7 @@ export function DepositModal({
               <input
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
+                disabled={busy}
                 dir="ltr"
                 placeholder="25000"
                 className="h-12 w-full rounded-xl border border-white/10 bg-white/[.04] px-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-emerald-400/50"
@@ -197,7 +200,8 @@ export function DepositModal({
               </label>
               <button
                 onClick={() => fileRef.current?.click()}
-                className="flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed border-white/15 bg-white/[.03] px-4 py-6 text-slate-400 hover:border-emerald-400/40 hover:text-emerald-300"
+                disabled={busy}
+                className="flex w-full flex-col items-center gap-2 rounded-2xl border border-dashed border-white/15 bg-white/[.03] px-4 py-6 text-slate-400 hover:border-emerald-400/40 hover:text-emerald-300 disabled:opacity-50"
               >
                 <Upload size={22} />
                 <span className="text-xs font-bold">
