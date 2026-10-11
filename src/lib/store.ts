@@ -222,6 +222,46 @@ export async function listOrders(userId?: string): Promise<Order[]> {
   return (data ?? []) as unknown as Order[];
 }
 
+export type PublicStats = {
+  services: number;
+  accounts: number;
+};
+
+function toCount(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/**
+ * مؤشرات الصفحة الرئيسية: عدد الخدمات المتاحة وعدد الحسابات المعروضة.
+ * الجدولان عامّان للقراءة، لذا لا نحتاج أي دالة تصعيد صلاحيات — وبذلك لا تُسجَّل
+ * أي أخطاء شبكة في الطرفية. يُعاد 0 عند فشل الاستعلام فيتحوّل العرض لقيم احتياطية.
+ */
+export async function getPublicStats(): Promise<PublicStats> {
+  const safeCount = async (query: PromiseLike<{ count: number | null }>): Promise<number> => {
+    try {
+      const { count } = await query;
+      return toCount(count);
+    } catch {
+      return 0;
+    }
+  };
+
+  const [services, accounts] = await Promise.all([
+    safeCount(
+      supabase.from("products").select("id", { count: "exact", head: true }).eq("available", true),
+    ),
+    safeCount(
+      supabase
+        .from("market_accounts")
+        .select("id", { count: "exact", head: true })
+        .eq("sold", false),
+    ),
+  ]);
+
+  return { services, accounts };
+}
+
 export async function updateOrderStatus(
   id: string,
   status: OrderStatus,

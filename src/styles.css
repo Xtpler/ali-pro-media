@@ -189,7 +189,7 @@ button {
   cursor: pointer;
 }
 .font-display {
-  font-family: "Cairo", sans-serif;
+  font-family: "IBM Plex Sans Arabic", "Cairo", sans-serif;
 }
 .splash-screen {
   position: fixed;
@@ -1739,5 +1739,284 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .status-badge::before {
     animation: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM HOME — mesh/aurora backdrop, glassmorphism, reveal-on-scroll and the
+   section primitives used by the redesigned landing page. Every color derives
+   from the design tokens, so both light and dark themes stay on-brand.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.home {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+}
+
+/* --- Backdrop: layered mesh + fine grid + film grain --- */
+.home-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.home-mesh {
+  position: absolute;
+  inset: -25% -15% auto -15%;
+  height: clamp(900px, 120vh, 1400px);
+  background:
+    radial-gradient(
+      55% 50% at 80% 6%,
+      color-mix(in oklab, var(--color-primary) 26%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      45% 42% at 8% 24%,
+      color-mix(in oklab, var(--color-primary) 15%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      42% 42% at 62% 82%,
+      color-mix(in oklab, #38bdf8 13%, transparent),
+      transparent 66%
+    );
+  filter: blur(14px);
+  animation: homeDrift 20s ease-in-out infinite alternate;
+}
+.home-grid {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: clamp(700px, 95vh, 1100px);
+  opacity: 0.55;
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--color-foreground) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-foreground) 8%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 58px 58px;
+  -webkit-mask-image: radial-gradient(125% 80% at 50% 0%, #000 8%, transparent 72%);
+  mask-image: radial-gradient(125% 80% at 50% 0%, #000 8%, transparent 72%);
+}
+.home-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+.home-content {
+  position: relative;
+  z-index: 1;
+}
+@keyframes homeDrift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 4%, 0) scale(1.12);
+  }
+}
+
+/* --- Layout rhythm --- */
+.home-section {
+  padding-block: clamp(3.25rem, 6.5vw, 6.5rem);
+}
+.home-container {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 640px) {
+  .home-container {
+    padding-inline: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .home-container {
+    padding-inline: 2.5rem;
+  }
+}
+
+/* --- Eyebrow + gradient text --- */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-primary) 30%, transparent);
+  background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  padding: 0.35rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+.gradient-text {
+  background: linear-gradient(
+    115deg,
+    var(--color-primary) 0%,
+    color-mix(in oklab, var(--color-primary) 55%, #7dd3fc) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* --- Glass surfaces --- */
+.glass-card {
+  position: relative;
+  border-radius: 1.5rem;
+  border: 1px solid color-mix(in oklab, var(--color-foreground) 10%, transparent);
+  background: color-mix(in oklab, var(--color-card) 72%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    0 24px 60px -40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 color-mix(in oklab, #ffffff 8%, transparent);
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.glass-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, #ffffff 9%, transparent),
+    transparent 42%
+  );
+}
+.glass-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in oklab, var(--color-primary) 42%, transparent);
+  box-shadow:
+    0 34px 80px -46px color-mix(in oklab, var(--color-primary) 80%, transparent),
+    inset 0 1px 0 color-mix(in oklab, #ffffff 10%, transparent);
+}
+.glass-card--flat:hover {
+  transform: none;
+}
+.light .glass-card {
+  background: color-mix(in oklab, #ffffff 82%, transparent);
+  box-shadow:
+    0 24px 60px -46px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.light .glass-card::before {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.65), transparent 46%);
+}
+
+/* --- Buttons --- */
+.btn-glow {
+  box-shadow: 0 16px 42px -16px color-mix(in oklab, var(--color-primary) 85%, transparent);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    filter 0.25s ease;
+}
+.btn-glow:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow: 0 20px 52px -16px color-mix(in oklab, var(--color-primary) 95%, transparent);
+}
+.btn-outline-glass {
+  border: 1px solid color-mix(in oklab, var(--color-foreground) 16%, transparent);
+  background: color-mix(in oklab, var(--color-card) 55%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.btn-outline-glass:hover {
+  border-color: color-mix(in oklab, var(--color-primary) 48%, transparent);
+  color: var(--color-primary);
+}
+
+/* --- Reveal on scroll --- */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--d, 0s);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* --- How-it-works connector --- */
+.step-connector {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--color-primary) 50%, transparent),
+    transparent
+  );
+}
+
+/* --- Featured pricing card --- */
+.price-featured {
+  border-color: color-mix(in oklab, var(--color-primary) 48%, transparent);
+  box-shadow:
+    0 34px 90px -48px color-mix(in oklab, var(--color-primary) 75%, transparent),
+    inset 0 0 0 1px color-mix(in oklab, var(--color-primary) 22%, transparent);
+}
+.price-featured::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    60% 50% at 50% 0%,
+    color-mix(in oklab, var(--color-primary) 16%, transparent),
+    transparent 70%
+  );
+}
+
+/* --- Marquee (trust bar platform strip) --- */
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marqueeScroll 26s linear infinite;
+}
+.marquee-mask:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marqueeScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-mesh,
+  .marquee-track {
+    animation: none !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .glass-card:hover,
+  .btn-glow:hover {
+    transform: none;
   }
 }
